@@ -1,8 +1,8 @@
-# mentor — setup
+# proctor — setup
 
 ## Endpoint
 
-`mentor` talks to any OpenAI-compatible `/chat/completions` endpoint. The default is OpenRouter:
+`proctor` talks to any OpenAI-compatible `/chat/completions` endpoint. The default is OpenRouter:
 
 ```bash
 export OPENROUTER_API_KEY=sk-or-...
@@ -22,12 +22,12 @@ export MENTOR_MODEL=qwen3:8b
 export MENTOR_MODEL=qwen/qwen3.7-flash   # default; any OpenAI-compatible model works
 ```
 
-The review is a single ~2k-token call, so a small/free model is fine. A reasoning-capable model works too — mentor
+The review is a single ~2k-token call, so a small/free model is fine. A reasoning-capable model works too — proctor
 strips any `<think>` block before parsing.
 
-## GitHub (only for `mentor pr`)
+## GitHub (only for `proctor pr`)
 
-`mentor pr` reads the PR title + diff over the public GitHub API. A `GITHUB_TOKEN` (read-only `public_repo` scope is
+`proctor pr` reads the PR title + diff over the public GitHub API. A `GITHUB_TOKEN` (read-only `public_repo` scope is
 enough) lifts the unauthenticated rate limit:
 
 ```bash

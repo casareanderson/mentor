@@ -1,4 +1,4 @@
-"""mentor — AI code review engine.
+"""proctor — AI code review engine.
 
 Reads a git diff and says what is wrong with it, in a shape a person can act on. It never edits, commits, pushes,
 merges or approves anything — it only reports. The one place it can be wrong is by naming a file or line that is not
@@ -14,7 +14,7 @@ import json
 import os
 import re
 
-SYSTEM = """You are mentor, a careful code reviewer for a small homelab/side-business estate.
+SYSTEM = """You are proctor, a careful code reviewer for a small homelab/side-business estate.
 You are given a git diff, and (usually) the pull request title and description for context. Review the DIFF ONLY for
 things that would actually cause harm or surprise: security holes (injection, secrets in code or logs, unsafe
 shell/docker/path handling, broken authz), silent data loss, a regression, or a mistake the author clearly did not
@@ -106,7 +106,7 @@ def check(diff, findings):
 
 def render_body(verdict, summary, findings):
     sev = {"high": "\U0001F534", "med": "\U0001F7E0", "low": "\U0001F7E1"}
-    lines = ["_mentor \u00b7 AI code review (advisory)_", ""]
+    lines = ["_proctor \u00b7 AI code review (advisory)_", ""]
     if summary:
         lines += [summary.strip(), ""]
     for f in findings:
