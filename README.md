@@ -1,47 +1,106 @@
 # mentor
 
-An AI code reviewer you can run from a terminal. Point it at a git diff and it tells you what's wrong — security
+**An AI code reviewer you can run from a terminal.** Point it at a git diff and it tells you what's wrong — security
 holes, silent data loss, regressions, mistakes the author didn't intend — in a shape you can act on.
 
-**It only reports.** It never edits, commits, pushes, merges or approves anything. A human still merges.
+**It only reports.** It never edits, commits, pushes, merges or approves anything; a human still merges.
 
-`mentor` is the standalone version of the code-review engine behind warden's review collector.
+![Licence: AGPL-3.0](https://img.shields.io/badge/licence-AGPL--3.0-blue) [![Buy Me a Coffee](https://raw.githubusercontent.com/casareanderson/.github/main/badges/bmc-yellow.svg)](https://buymeacoffee.com/iamc_tech)
+
+`mentor` is the standalone code-review engine behind warden's PR reviewer. Part of the [warden family](#the-warden-family).
+
+## What it does
+
+```
+$ git diff | mentor diff -
+
+mentor — changes
+The patch adds a shell call built from an untrusted filename.
+
+  🔴 [app/upload.py:41] shell injection — subprocess.run(f"...{filename}...", shell=True) with an untrusted filename
+  🟡 [app/upload.py] missing size cap — the file is read into memory with no limit
+```
+
+For every finding mentor names the file and line, then — the bit most AI reviewers skip — **checks itself against the
+diff**:
+
+- a finding that names a file not in the diff is **dropped** (a hallucination),
+- a line outside that file's hunks is **cleared** (`line_unverified`),
+
+so the output you act on only ever points at code that is actually in the patch.
+
+## Why
+
+Code-review models are cheap and fast, but they invent: they name a function that isn't in the diff, quote a line that
+doesn't exist, flag a bug that isn't there. `mentor` is built around the one failure that matters — the file/line it
+points at — and refuses to trust a finding it can't tie back to the diff.
+
+It reviews the **diff only**: injection, secrets in code or logs, unsafe shell/docker/path handling, broken authz,
+silent data loss, a regression, or a mistake the author clearly didn't intend. Style and nitpicks are ignored unless
+they hide a bug.
+
+## Verdicts
+
+| Verdict | Meaning |
+|---|---|
+| `approve` | nothing worth reporting |
+| `comment` | worth fixing, not blocking |
+| `changes` | must not merge as-is |
+
+Findings carry a `severity` (`high` / `med` / `low`), a `file`, a `line`, a short `title` and `why`.
 
 ## Install
 
 ```bash
 git clone https://github.com/casareanderson/mentor.git
 cd mentor
-pip install requests
+pip install requests   # the only dependency, used by `mentor pr`
 ```
 
 ## Use
 
 ```bash
-# review a diff from stdin
+# a diff from stdin
 git diff | ./mentor diff -
 
-# review a diff file
+# a diff file
 ./mentor diff path/to.patch
 
 # fetch a PR from GitHub and review it
 GITHUB_TOKEN=... ./mentor pr owner/repo#123
 ```
 
-Environment variables (any OpenAI-compatible endpoint works — OpenRouter, a local Ollama, etc.):
+See [docs/EXAMPLES.md](docs/EXAMPLES.md) for a GitHub Actions recipe and [docs/SETUP.md](docs/SETUP.md) for the
+endpoint/model configuration.
+
+## Configuration
+
+Any OpenAI-compatible endpoint works — OpenRouter, a local Ollama, etc.
 
 ```bash
-export OPENROUTER_API_KEY=sk-or-...   # or MENTOR_API_KEY
-export MENTOR_MODEL=qwen/qwen3.7-flash
+export OPENROUTER_API_KEY=sk-or-...      # or MENTOR_API_KEY
+export MENTOR_MODEL=qwen/qwen3.7-flash   # default
+export MENTOR_URL=https://...            # override the endpoint base (default OpenRouter)
+export GITHUB_TOKEN=...                  # only needed for `mentor pr`
 ```
 
-## What it does
+## Limits (read these)
 
-1. Sends the diff (plus the PR title/description if you gave one) to the model.
-2. Parses the verdict — `approve`, `comment`, or `changes` — and a list of findings.
-3. **Fact-checks every finding against the diff.** A finding that names a file not in the diff is dropped; a line
-   outside that file's hunks is cleared. This is the one way a model can be confidently wrong, so it's never trusted.
+- **It's advisory.** `mentor` never merges, blocks or approves anything. It hands you a verdict; you decide.
+- **It sees only the diff.** Context that isn't in the diff (the code around it, the ticket, intent) is invisible.
+  That's deliberate — it keeps the review grounded — but a correct-looking change can still be wrong.
+- **The model can still be wrong about *why*.** The fact-check catches wrong *files and lines*; it can't catch a
+  wrong *judgement* on a real line. Read the `why`, don't rubber-stamp it.
+
+## The warden family
+
+| Tool | Watches | Runs as |
+|---|---|---|
+| [warden](https://github.com/casareanderson/warden) | Intrusions, bans, vulnerabilities, patches and AI agents | A server + web console |
+| [sieve](https://github.com/casareanderson/sieve) | Known vulnerabilities + plain-text secrets | A CLI: `pipx install sieve-scan` |
+| [ephor](https://github.com/casareanderson/ephor) | What AI agents connect to, download and can access | A dependency-free CLI |
+| [warden-patch](https://github.com/casareanderson/warden-patch) | Applies the patches sieve finds, with your approval | A CLI |
 
 ## Licence
 
-AGPL-3.0.
+AGPL-3.0-or-later.
